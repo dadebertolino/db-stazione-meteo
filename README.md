@@ -28,8 +28,10 @@ Il bridge è nel repository del progetto, [dadebertolino/stazione-meteo-lora](ht
 | `db-stazione-meteo.php` | file principale: costanti, updater, avvio |
 | `inc/class-updater.php` | aggiornamenti da GitHub Releases (`DB_GitHub_Updater_V2`) |
 | `inc/class-dbmt-db.php` | tabella `{prefix}dbmt_misure`, creata all'attivazione |
-| `inc/class-dbmt-rest.php` | endpoint: ricezione dal bridge (con token), ultimi valori (pubblico) |
-| `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token, nomi dei nodi, quota, stato |
+| `inc/class-dbmt-rest.php` | endpoint `POST /dbmt/v1/misure`: ricezione dal bridge, con token |
+| `inc/class-dbmt-validazione.php` | controllo di ogni misura, campo per campo |
+| `inc/class-dbmt-token.php` | token del bridge: nel database solo l'hash |
+| `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token, quota, stato |
 | `inc/class-dbmt-shortcode.php` | shortcode `[dbmt_meteo]` |
 | `assets/css/db-admin-ui.css` | design system admin condiviso |
 | `uninstall.php` | rimuove tabella e opzioni |
@@ -49,7 +51,7 @@ Nessun dato personale: solo misure ambientali e diagnostica dei nodi.
 
 ```
 POST /wp-json/dbmt/v1/misure
-Authorization: Bearer <token>
+X-DBMT-Token: <token>
 Content-Type: application/json
 ```
 
@@ -84,6 +86,8 @@ Content-Type: application/json
 | `reset` | intero 1-7 o `null` | causa del riavvio, solo con `seq` 0 |
 | `temp_c`, `ur_pct`, `press_hpa`, `vbat_mv`, `vbat_tx_mv` | numero o `null` | `null` = misura non disponibile; `press_hpa` sempre `null` per l'SHT45 |
 | `rssi`, `snr` | intero | qualità del segnale al ricevitore |
+
+Il token si genera in **Impostazioni → Stazione Meteo** e si vede una sola volta. Va nell'header `X-DBMT-Token`; è accettato anche `Authorization: Bearer <token>`, ma alcuni hosting Apache tolgono quell'header prima di PHP e alcuni plugin di sicurezza lo intercettano.
 
 Al massimo **500 misure per richiesta**. Dopo un periodo senza internet il bridge svuota la coda in più richieste, dalle più vecchie.
 

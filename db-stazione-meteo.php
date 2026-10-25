@@ -31,11 +31,15 @@ if ( class_exists( 'DB_GitHub_Updater_V2' ) ) {
 }
 
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-db.php';
+require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-validazione.php';
+require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-token.php';
+require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-meteo.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-rest.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-admin.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-shortcode.php';
 
 register_activation_hook( __FILE__, array( 'DBMT_DB', 'install' ) );
+add_action( 'plugins_loaded', array( 'DBMT_DB', 'maybe_upgrade' ) );
 
 DBMT_Rest::register();
 DBMT_Admin::register();
