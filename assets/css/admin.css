@@ -1,0 +1,9 @@
+/**
+ * DB Stazione Meteo — stili admin specifici.
+ * Il grosso viene da db-admin-ui.css (design system condiviso).
+ */
+
+.dbmt-settings-wrap .db-ui-alert {
+	margin: 1em 0;
+	max-width: 700px;
+}

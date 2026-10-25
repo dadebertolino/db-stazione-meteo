@@ -1,0 +1,451 @@
+/**
+ * DB Admin UI — Design System v1.0
+ * Stile admin condiviso per tutti i plugin di Davide Bertolino.
+ * Copia questo file in assets/css/ di ogni plugin.
+ *
+ * Prefisso classi: .db-ui-*
+ * Non sovrascrive lo stile nativo WP — si aggiunge.
+ */
+
+/* ============================================================
+   VARIABILI (Custom Properties)
+   ============================================================ */
+:root {
+    --db-primary: #2271b1;
+    --db-primary-hover: #135e96;
+    --db-primary-light: #e8f0fe;
+    --db-success: #1d6e3f;
+    --db-success-light: #e7f5e7;
+    --db-success-border: #b7dfb7;
+    --db-warning: #dba617;
+    --db-warning-light: #fff8e1;
+    --db-warning-dark: #7a5d00;
+    --db-danger: #d63638;
+    --db-danger-light: #fce4e4;
+    --db-danger-border: #f5c6c6;
+    --db-text: #1d2327;
+    --db-text-muted: #646970;
+    --db-text-light: #999;
+    --db-bg: #ffffff;
+    --db-bg-subtle: #f6f7f7;
+    --db-bg-hover: #f0f0f1;
+    --db-border: #dcdcde;
+    --db-border-light: #e9ecef;
+    --db-radius: 8px;
+    --db-radius-sm: 6px;
+    --db-radius-lg: 12px;
+    --db-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --db-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --db-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.06), 0 4px 6px rgba(0, 0, 0, 0.04);
+    --db-transition: 0.15s ease;
+    --db-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+/* ============================================================
+   CARD
+   ============================================================ */
+.db-ui-card {
+    background: var(--db-bg);
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius);
+    box-shadow: var(--db-shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: box-shadow var(--db-transition);
+}
+.db-ui-card:hover { box-shadow: var(--db-shadow-md); }
+.db-ui-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--db-border-light);
+}
+.db-ui-card-header h2,
+.db-ui-card-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--db-text);
+}
+.db-ui-card-body { }
+.db-ui-card-footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--db-border-light);
+}
+
+/* ============================================================
+   HEADER PAGINA
+   ============================================================ */
+.db-ui-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.db-ui-page-header h1 {
+    font-size: 23px;
+    font-weight: 600;
+    color: var(--db-text);
+    margin: 0;
+    line-height: 1.3;
+}
+.db-ui-page-header .db-ui-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ============================================================
+   BOTTONI
+   ============================================================ */
+.db-ui-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius-sm);
+    background: var(--db-bg);
+    color: var(--db-text);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--db-font);
+    cursor: pointer;
+    transition: all var(--db-transition);
+    text-decoration: none;
+    line-height: 1.5;
+    min-height: 36px;
+    white-space: nowrap;
+}
+.db-ui-btn:hover {
+    background: var(--db-bg-hover);
+    border-color: #999;
+    color: var(--db-text);
+}
+.db-ui-btn:focus-visible {
+    outline: 2px solid var(--db-primary);
+    outline-offset: 1px;
+}
+
+.db-ui-btn-primary {
+    background: var(--db-primary);
+    border-color: var(--db-primary);
+    color: #fff;
+}
+.db-ui-btn-primary:hover {
+    background: var(--db-primary-hover);
+    border-color: var(--db-primary-hover);
+    color: #fff;
+}
+
+.db-ui-btn-success {
+    background: var(--db-success);
+    border-color: var(--db-success);
+    color: #fff;
+}
+.db-ui-btn-success:hover { background: #165a33; color: #fff; }
+
+.db-ui-btn-danger {
+    background: var(--db-danger);
+    border-color: var(--db-danger);
+    color: #fff;
+}
+.db-ui-btn-danger:hover { background: #b32d2e; color: #fff; }
+
+.db-ui-btn-sm { padding: 4px 10px; font-size: 12px; min-height: 28px; }
+.db-ui-btn-lg { padding: 12px 24px; font-size: 15px; min-height: 44px; }
+.db-ui-btn-icon { padding: 6px 8px; min-width: 36px; justify-content: center; }
+.db-ui-btn-icon.db-ui-btn-sm { padding: 4px 6px; min-width: 28px; }
+
+/* ============================================================
+   BADGE / TAG
+   ============================================================ */
+.db-ui-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.db-ui-badge-primary { background: var(--db-primary-light); color: var(--db-primary); }
+.db-ui-badge-success { background: var(--db-success-light); color: var(--db-success); }
+.db-ui-badge-warning { background: var(--db-warning-light); color: var(--db-warning-dark); }
+.db-ui-badge-danger { background: var(--db-danger-light); color: var(--db-danger); }
+.db-ui-badge-muted { background: var(--db-bg-hover); color: var(--db-text-muted); }
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.db-ui-progress {
+    height: 10px;
+    background: var(--db-bg-hover);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 6px 0;
+}
+.db-ui-progress-fill {
+    height: 100%;
+    background: var(--db-primary);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+}
+.db-ui-progress-success .db-ui-progress-fill { background: var(--db-success); }
+.db-ui-progress-warning .db-ui-progress-fill { background: var(--db-warning); }
+.db-ui-progress-danger .db-ui-progress-fill { background: var(--db-danger); }
+
+/* ============================================================
+   TABELLA
+   ============================================================ */
+.db-ui-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius);
+    overflow: hidden;
+    background: var(--db-bg);
+    box-shadow: var(--db-shadow);
+}
+.db-ui-table thead th {
+    background: var(--db-bg-subtle);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--db-text);
+    text-align: left;
+    border-bottom: 2px solid var(--db-border);
+}
+.db-ui-table tbody td {
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--db-text);
+    border-bottom: 1px solid var(--db-border-light);
+    vertical-align: middle;
+}
+.db-ui-table tbody tr:last-child td { border-bottom: none; }
+.db-ui-table tbody tr:hover { background: var(--db-bg-subtle); }
+.db-ui-table tbody tr.db-ui-row-muted { opacity: 0.6; }
+
+/* ============================================================
+   FORM ELEMENTS (admin metabox)
+   ============================================================ */
+.db-ui-input,
+.db-ui-select,
+.db-ui-textarea {
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius-sm);
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: var(--db-font);
+    color: var(--db-text);
+    background: var(--db-bg);
+    transition: border-color var(--db-transition), box-shadow var(--db-transition);
+    width: 100%;
+}
+.db-ui-input:focus,
+.db-ui-select:focus,
+.db-ui-textarea:focus {
+    border-color: var(--db-primary);
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.15);
+    outline: none;
+}
+
+/* ============================================================
+   STAT BOX (sidebar metabox)
+   ============================================================ */
+.db-ui-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+.db-ui-stat-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--db-radius);
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.db-ui-stat-icon-primary { background: var(--db-primary-light); }
+.db-ui-stat-icon-success { background: var(--db-success-light); }
+.db-ui-stat-icon-danger { background: var(--db-danger-light); }
+.db-ui-stat-icon-warning { background: var(--db-warning-light); }
+.db-ui-stat-value { font-size: 20px; font-weight: 700; color: var(--db-text); line-height: 1.2; }
+.db-ui-stat-label { font-size: 12px; color: var(--db-text-muted); }
+
+/* ============================================================
+   ALERT / NOTICE
+   ============================================================ */
+.db-ui-alert {
+    padding: 12px 16px;
+    border-radius: var(--db-radius);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.db-ui-alert-icon { font-size: 18px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+.db-ui-alert-info { background: var(--db-primary-light); color: var(--db-primary); border: 1px solid #c3ddf1; }
+.db-ui-alert-success { background: var(--db-success-light); color: var(--db-success); border: 1px solid var(--db-success-border); }
+.db-ui-alert-warning { background: var(--db-warning-light); color: var(--db-warning-dark); border: 1px solid #ffe082; }
+.db-ui-alert-danger { background: var(--db-danger-light); color: var(--db-danger); border: 1px solid var(--db-danger-border); }
+
+/* ============================================================
+   DRAG & DROP ITEMS
+   ============================================================ */
+.db-ui-drag-item {
+    background: var(--db-bg);
+    border: 1px solid var(--db-border);
+    border-radius: var(--db-radius);
+    padding: 14px;
+    margin-bottom: 8px;
+    position: relative;
+    cursor: grab;
+    transition: box-shadow var(--db-transition), border-color var(--db-transition);
+}
+.db-ui-drag-item:hover {
+    border-color: var(--db-primary);
+    box-shadow: var(--db-shadow-md);
+}
+.db-ui-drag-item:active { cursor: grabbing; }
+.db-ui-drag-handle {
+    cursor: grab;
+    color: var(--db-text-light);
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color var(--db-transition);
+}
+.db-ui-drag-handle:hover { color: var(--db-primary); }
+.db-ui-drag-item .db-ui-drag-remove {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--db-text-light);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color var(--db-transition), background var(--db-transition);
+}
+.db-ui-drag-item .db-ui-drag-remove:hover {
+    color: var(--db-danger);
+    background: var(--db-danger-light);
+}
+
+/* ============================================================
+   TOOLTIP
+   ============================================================ */
+.db-ui-tip { position: relative; }
+.db-ui-tip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--db-text);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: var(--db-radius-sm);
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--db-transition);
+    z-index: 100;
+    line-height: 1.4;
+    box-shadow: var(--db-shadow-md);
+}
+.db-ui-tip::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--db-text);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--db-transition);
+    z-index: 100;
+}
+.db-ui-tip:hover::after,
+.db-ui-tip:focus-visible::after,
+.db-ui-tip:hover::before,
+.db-ui-tip:focus-visible::before { opacity: 1; }
+
+/* ============================================================
+   FEEDBACK (check-in style)
+   ============================================================ */
+.db-ui-feedback {
+    padding: 24px;
+    border-radius: var(--db-radius-lg);
+    text-align: center;
+    margin: 20px 0;
+    animation: db-ui-fadein 0.3s ease;
+}
+.db-ui-feedback-icon { font-size: 64px; display: block; margin-bottom: 12px; }
+.db-ui-feedback-title { font-size: 24px; font-weight: 700; display: block; }
+.db-ui-feedback-text { font-size: 16px; display: block; margin-top: 4px; }
+.db-ui-feedback-success { background: var(--db-success-light); border: 2px solid var(--db-success); color: var(--db-success); }
+.db-ui-feedback-warning { background: var(--db-warning-light); border: 2px solid var(--db-warning); color: var(--db-warning-dark); }
+.db-ui-feedback-error { background: var(--db-danger-light); border: 2px solid var(--db-danger); color: var(--db-danger); }
+
+@keyframes db-ui-fadein {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.db-ui-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--db-text-muted);
+}
+.db-ui-empty-icon { font-size: 48px; margin-bottom: 12px; display: block; opacity: 0.5; }
+.db-ui-empty-text { font-size: 15px; }
+
+/* ============================================================
+   SEPARATOR
+   ============================================================ */
+.db-ui-sep {
+    border: none;
+    border-top: 1px solid var(--db-border-light);
+    margin: 16px 0;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media screen and (max-width: 782px) {
+    .db-ui-page-header { flex-direction: column; align-items: flex-start; }
+    .db-ui-table { font-size: 12px; }
+    .db-ui-table thead th,
+    .db-ui-table tbody td { padding: 8px 10px; }
+    .db-ui-btn { padding: 6px 12px; }
+    .db-ui-feedback-icon { font-size: 48px; }
+    .db-ui-feedback-title { font-size: 20px; }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .db-ui-feedback { animation: none; }
+    * { transition-duration: 0s !important; }
+}
