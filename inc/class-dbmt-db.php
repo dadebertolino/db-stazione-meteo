@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class DBMT_DB {
 
-	const DB_VERSION = '1';
+	const DB_VERSION = '2'; // 2: colonna tipo
 
 	public static function table() {
 		global $wpdb;
@@ -42,6 +42,7 @@ class DBMT_DB {
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				ricevuto datetime NOT NULL,
 				nodo tinyint(3) unsigned NOT NULL,
+				tipo varchar(10) NOT NULL DEFAULT 'bme280',
 				seq tinyint(3) unsigned NOT NULL,
 				reset_causa tinyint(3) unsigned DEFAULT NULL,
 				temp_c decimal(5,2) DEFAULT NULL,
@@ -58,5 +59,50 @@ class DBMT_DB {
 		);
 
 		update_option( 'dbmt_db_version', self::DB_VERSION );
+	}
+
+	/**
+	 * L'hook di attivazione non gira sugli aggiornamenti del plugin: la
+	 * tabella si aggiorna qui quando cambia DB_VERSION.
+	 */
+	public static function maybe_upgrade() {
+		if ( get_option( 'dbmt_db_version' ) !== self::DB_VERSION ) {
+			self::install();
+		}
+	}
+
+	/**
+	 * Inserisce una riga già validata (DBMT_Validazione::misura).
+	 *
+	 * @return bool|null true inserita, false doppione, null errore del database.
+	 */
+	public static function inserisci( array $riga ) {
+		global $wpdb;
+
+		// prepare() non conosce NULL: i valori mancanti vanno nel testo della query
+		$segnaposti = array();
+		$valori     = array();
+		foreach ( $riga as $v ) {
+			if ( null === $v ) {
+				$segnaposti[] = 'NULL';
+			} elseif ( is_int( $v ) ) {
+				$segnaposti[] = '%d';
+				$valori[]     = $v;
+			} else {
+				$segnaposti[] = '%s'; // anche i decimali: %f di prepare() li arrotonda a 6 cifre
+				$valori[]     = (string) $v;
+			}
+		}
+
+		$wpdb->query(
+			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'INSERT IGNORE INTO ' . self::table() . ' (' . implode( ',', array_keys( $riga ) ) . ') VALUES (' . implode( ',', $segnaposti ) . ')',
+				$valori
+			)
+		);
+		if ( '' !== $wpdb->last_error ) {
+			return null;
+		}
+		return 1 === (int) $wpdb->rows_affected;
 	}
 }

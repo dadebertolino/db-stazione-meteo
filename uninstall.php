@@ -13,6 +13,7 @@ global $wpdb;
 $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dbmt_misure" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 // Elenco esplicito, mai LIKE 'dbmt_%': in SQL '_' è un carattere jolly.
-foreach ( array( 'dbmt_db_version', 'dbmt_settings', 'dbmt_token_hash' ) as $dbmt_option ) {
+foreach ( array( 'dbmt_db_version', 'dbmt_settings', 'dbmt_token_hash', 'dbmt_ultimo_invio' ) as $dbmt_option ) {
 	delete_option( $dbmt_option );
 }
+delete_transient( 'dbmt_ultime' );
