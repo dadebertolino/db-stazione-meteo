@@ -1,0 +1,90 @@
+name: CI
+
+# Pipeline di DB Stazione Meteo:
+#   test    → php -l, test senza WordPress su PHP 7.4-8.4, controllo del JavaScript
+#   release → solo su tag v*: versione del tag = versione del plugin, ZIP con la
+#             cartella db-stazione-meteo/ (quella che vuole DB_GitHub_Updater_V2),
+#             release con il changelog della versione preso da readme.txt
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (PHP ${{ matrix.php }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: php -l su tutti i file
+        run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Test senza WordPress
+        run: php tests/run-tests.php
+
+      - name: Sintassi del JavaScript
+        run: node --check assets/js/grafici.js
+
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    needs: [ test ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Versione del tag = versione del plugin
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          HEADER=$(sed -n 's/^ \* Version: *//p' db-stazione-meteo.php)
+          CONST=$(sed -n "s/^define( 'DBMT_VERSION', '\(.*\)' );/\1/p" db-stazione-meteo.php)
+          STABLE=$(sed -n 's/^Stable tag: *//p' readme.txt)
+          echo "tag=$TAG header=$HEADER DBMT_VERSION=$CONST stable=$STABLE"
+          if [ "$TAG" != "$HEADER" ] || [ "$TAG" != "$CONST" ] || [ "$TAG" != "$STABLE" ]; then
+            echo "::error::La versione del tag ($TAG) non coincide con quella del plugin (header $HEADER, DBMT_VERSION $CONST, Stable tag $STABLE)."
+            exit 1
+          fi
+
+      - name: Changelog della versione
+        run: |
+          awk -v v="= ${GITHUB_REF_NAME#v} =" '$0 == v { dentro = 1; next } /^= / && dentro { exit } dentro' readme.txt > note.md
+          if [ ! -s note.md ]; then
+            echo "::error::Nel readme.txt manca la sezione '= ${GITHUB_REF_NAME#v} =' del changelog."
+            exit 1
+          fi
+          cat note.md
+
+      - name: Build ZIP
+        # git archive rispetta gli export-ignore di .gitattributes (niente test)
+        # e mette tutto in db-stazione-meteo/: lo ZIP automatico di GitHub
+        # avrebbe db-stazione-meteo-x.y.z/
+        run: |
+          git archive --format=zip --prefix=db-stazione-meteo/ \
+            -o "db-stazione-meteo-${GITHUB_REF_NAME#v}.zip" "$GITHUB_REF_NAME"
+          unzip -l "db-stazione-meteo-${GITHUB_REF_NAME#v}.zip"
+
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "db-stazione-meteo-${GITHUB_REF_NAME#v}.zip" \
+            --title "DB Stazione Meteo ${GITHUB_REF_NAME#v}" --notes-file note.md --verify-tag

@@ -3,7 +3,7 @@
 Mostra sul sito della scuola le misure della stazione meteo LoRa: ultimi valori e andamento.
 Niente servizi esterni, niente registrazioni, niente abbonamenti.
 
-**Versione:** 0.1.0  
+**Versione:** 0.2.0  
 **Autore:** [Davide Bertolino](https://www.davidebertolino.it)  
 **Licenza:** GPL v2 or later  
 **Richiede:** WordPress 5.8+, PHP 7.4+  
@@ -31,10 +31,11 @@ Il bridge è nel repository del progetto, [dadebertolino/stazione-meteo-lora](ht
 | `inc/class-dbmt-rest.php` | endpoint `POST /dbmt/v1/misure`: ricezione dal bridge, con token |
 | `inc/class-dbmt-validazione.php` | controllo di ogni misura, campo per campo |
 | `inc/class-dbmt-token.php` | token del bridge: nel database solo l'hash |
-| `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token, quota, stato |
+| `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token, quota, stato, pulizia dati |
 | `inc/class-dbmt-shortcode.php` | shortcode `[dbmt_meteo]` (ultimi valori) e `[dbmt_grafici]` (andamento) |
 | `inc/class-dbmt-serie.php` | serie aggregate per i grafici: `GET /dbmt/v1/serie` |
 | `inc/class-dbmt-meteo.php` | pressione riportata al livello del mare |
+| `inc/class-dbmt-pulizia.php` | pulizia dati: eliminazione delle misure, tutte o fino a un istante |
 | `assets/js/grafici.js` | grafici SVG, senza librerie né CDN |
 | `assets/css/db-admin-ui.css` | design system admin condiviso |
 | `uninstall.php` | rimuove tabella e opzioni |
