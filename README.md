@@ -3,7 +3,7 @@
 Mostra sul sito della scuola le misure della stazione meteo LoRa: ultimi valori e andamento.
 Niente servizi esterni, niente registrazioni, niente abbonamenti.
 
-**Versione:** 0.1.0 (in sviluppo)  
+**Versione:** 0.1.0  
 **Autore:** [Davide Bertolino](https://www.davidebertolino.it)  
 **Licenza:** GPL v2 or later  
 **Richiede:** WordPress 5.8+, PHP 7.4+  

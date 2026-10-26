@@ -19,4 +19,8 @@ Niente servizi esterni, niente registrazioni, niente nag, niente trucchi.
 == Changelog ==
 
 = 0.1.0 =
-* Struttura iniziale.
+* Prima versione.
+* Endpoint POST /wp-json/dbmt/v1/misure per il bridge del Raspberry, con token (salvato solo come hash), controllo di ogni misura e doppioni ignorati.
+* Impostazioni → Stazione Meteo: indirizzo per il bridge, token, quota della stazione, stato dei nodi, avviso se il fuso orario del sito è UTC.
+* Shortcode [dbmt_meteo]: ultimi valori, pressione al livello del mare, minima e massima delle 24 ore, avviso se i dati non sono aggiornati.
+* Shortcode [dbmt_grafici]: andamento a 24 ore, 7 giorni e 30 giorni, con tabella dei dati; SVG senza librerie esterne.
