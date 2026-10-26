@@ -32,10 +32,28 @@ Il bridge è nel repository del progetto, [dadebertolino/stazione-meteo-lora](ht
 | `inc/class-dbmt-validazione.php` | controllo di ogni misura, campo per campo |
 | `inc/class-dbmt-token.php` | token del bridge: nel database solo l'hash |
 | `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token, quota, stato |
-| `inc/class-dbmt-shortcode.php` | shortcode `[dbmt_meteo]` |
+| `inc/class-dbmt-shortcode.php` | shortcode `[dbmt_meteo]` (ultimi valori) e `[dbmt_grafici]` (andamento) |
+| `inc/class-dbmt-serie.php` | serie aggregate per i grafici: `GET /dbmt/v1/serie` |
+| `inc/class-dbmt-meteo.php` | pressione riportata al livello del mare |
+| `assets/js/grafici.js` | grafici SVG, senza librerie né CDN |
 | `assets/css/db-admin-ui.css` | design system admin condiviso |
 | `uninstall.php` | rimuove tabella e opzioni |
 | `tests/run-tests.php` | test senza WordPress: `php tests/run-tests.php` |
+
+## Sulla pagina
+
+```
+[dbmt_meteo]              ultimi valori di ogni nodo, minima e massima delle 24 ore
+[dbmt_meteo nodo="2"]     un nodo solo
+[dbmt_grafici]            andamento: 24 ore, 7 giorni, 30 giorni
+[dbmt_grafici periodo="7g"]
+```
+
+**I grafici** sono tre, uno sotto l'altro con lo stesso asse dei tempi: temperatura, umidità, pressione al livello del mare. Grandezze con unità diverse non condividono mai un asse. Ogni nodo è una linea con il colore del suo numero (la palette è verificata per il daltonismo); sui 7 e 30 giorni una fascia mostra minima e massima di ogni intervallo. Dove mancano misure la linea si interrompe. Il mouse, o le frecce della tastiera sul grafico selezionato, mostra in un solo riquadro i valori di tutti i nodi in quell'istante; "Mostra i dati in tabella" dà gli stessi dati senza grafico.
+
+Sono disegnati in SVG da `assets/js/grafici.js`, senza librerie e senza CDN: la pagina della scuola non fa richieste a server esterni. Si aggiornano da soli ogni 5 minuti.
+
+**Le serie** arrivano già aggregate da `GET /wp-json/dbmt/v1/serie?periodo=24h|7g|30g`, pubblico e in sola lettura: medie a 10 minuti (24 ore), a un'ora (7 giorni), a 3 ore (30 giorni), quindi al massimo qualche centinaio di punti anche dopo anni di dati. In cache da 1 a 15 minuti secondo il periodo.
 
 ## Dati
 

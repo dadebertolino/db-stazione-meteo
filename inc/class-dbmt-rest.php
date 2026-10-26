@@ -5,6 +5,8 @@
  * POST /wp-json/dbmt/v1/misure   il bridge invia un gruppo di misure.
  *                                Token nell'header X-DBMT-Token (oppure
  *                                Authorization: Bearer).
+ * GET  /wp-json/dbmt/v1/serie    serie aggregate per i grafici, pubbliche e
+ *                                in sola lettura (?periodo=24h|7g|30g).
  *
  * Il token viaggia in un header proprio perché alcuni hosting Apache tolgono
  * Authorization prima di PHP, e alcuni plugin di sicurezza lo intercettano.
@@ -36,6 +38,32 @@ class DBMT_Rest {
 				'permission_callback' => array( __CLASS__, 'autorizza' ),
 			)
 		);
+		register_rest_route(
+			self::NS,
+			'/serie',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'serie' ),
+				'permission_callback' => '__return_true', // solo misure ambientali, nessun dato personale
+				'args'                => array(
+					'periodo' => array(
+						'type'    => 'string', // senza type WordPress non controlla enum
+						'default' => '24h',
+						'enum'    => array_keys( DBMT_Serie::PERIODI ),
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * @param WP_REST_Request $request Richiesta.
+	 */
+	public static function serie( $request ) {
+		// Alcuni PHP (anche Local) hanno serialize_precision = 17: 18.21 diventerebbe
+		// 18.210000000000001 e la risposta raddoppierebbe. -1 = cifre minime esatte.
+		ini_set( 'serialize_precision', '-1' ); // phpcs:ignore WordPress.PHP.IniSet.Risky
+		return rest_ensure_response( DBMT_Serie::periodo( $request['periodo'] ) );
 	}
 
 	/**
@@ -96,6 +124,7 @@ class DBMT_Rest {
 
 		if ( $inserite > 0 ) {
 			delete_transient( 'dbmt_ultime' ); // la pagina mostra subito le misure nuove
+			delete_transient( 'dbmt_serie_24h' );
 		}
 
 		update_option(
