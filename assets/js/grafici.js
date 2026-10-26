@@ -108,7 +108,7 @@
 	}
 
 	Grafici.prototype.num = function (v, dec) {
-		return v === null ? '–' : new Intl.NumberFormat(this.locale, { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
+		return v === null ? '–' : new Intl.NumberFormat(this.locale, { minimumFractionDigits: dec, maximumFractionDigits: dec, useGrouping: false }).format(v);
 	};
 
 	Grafici.prototype.collega = function () {

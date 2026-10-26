@@ -164,7 +164,10 @@ class DBMT_Shortcode {
 		if ( null === $v ) {
 			return esc_html__( 'non disponibile', 'db-stazione-meteo' );
 		}
-		return esc_html( number_format_i18n( (float) $v, $decimali ) . "\u{00A0}" . $unita );
+		// Senza separatore delle migliaia: per la pressione si scrive 1015,6 hPa, non 1.015,6
+		global $wp_locale;
+		$virgola = isset( $wp_locale ) ? $wp_locale->number_format['decimal_point'] : '.';
+		return esc_html( number_format( (float) $v, $decimali, $virgola, '' ) . "\u{00A0}" . $unita );
 	}
 
 	private static function scheda( $n, $d, $piu_nodi ) {

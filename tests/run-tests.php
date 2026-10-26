@@ -49,6 +49,9 @@ class Finto_WPDB {
 	}
 	public function query( $sql ) {
 		$this->ultima_query = $sql;
+		if ( 0 === strpos( $sql, 'DELETE' ) ) {
+			return $this->guasto ? false : 3;
+		}
 		if ( $this->guasto ) {
 			$this->last_error = 'MySQL server has gone away';
 			return false;
@@ -69,6 +72,7 @@ require __DIR__ . '/../inc/class-dbmt-db.php';
 require __DIR__ . '/../inc/class-dbmt-rest.php';
 require __DIR__ . '/../inc/class-dbmt-meteo.php';
 require __DIR__ . '/../inc/class-dbmt-serie.php';
+require __DIR__ . '/../inc/class-dbmt-pulizia.php';
 
 $pass = 0;
 $fail = 0;
@@ -236,6 +240,24 @@ check( 'sensore guasto: null, non zero', null === $p1[1] && null === $p1[4] );
 check( 'senza temperatura la pressione usa i 15 °C standard', round( DBMT_Meteo::pressione_slm( 962.5, 395 ), 1 ) === $p1[7] );
 check( 'intervallo vuoto non inventato: punti 1 e 3, non 2', 2988243 * 600 + 300 === $p1[0] );
 check( 'nodo sht45: pressione null', null === $nodi[1]['punti'][0][7] );
+
+// ------------------------------------------------------------ Pulizia -----
+echo "Pulizia\n";
+$roma = new DateTimeZone( 'Europe/Rome' );
+check( 'ora solare: 08:00 a Roma = 07:00 UTC', '2026-10-27 07:00:00' === DBMT_Pulizia::limite_utc( '2026-10-27T08:00', $roma ) );
+check( 'ora legale: 08:00 a Roma = 06:00 UTC', '2026-07-15 06:00:00' === DBMT_Pulizia::limite_utc( '2026-07-15T08:00', $roma ) );
+check( 'giorno del cambio d\'ora: 12:00 = 11:00 UTC', '2026-10-25 11:00:00' === DBMT_Pulizia::limite_utc( '2026-10-25T12:00', $roma ) );
+check( 'data impossibile: rifiutata', null === DBMT_Pulizia::limite_utc( '2026-02-30T08:00', $roma ) );
+check( 'testo qualsiasi: rifiutato', null === DBMT_Pulizia::limite_utc( 'ieri', $roma ) );
+check( 'vuoto: rifiutato', null === DBMT_Pulizia::limite_utc( '', $roma ) );
+
+check( 'tutte le misure: 3 eliminate', 3 === DBMT_Pulizia::elimina( null, 0 ) );
+check( 'tutte: nessuna condizione', 'DELETE FROM wp_dbmt_misure WHERE 1=1' === $GLOBALS['wpdb']->ultima_query );
+DBMT_Pulizia::elimina( '2026-10-27 07:00:00', 2 );
+check( 'prima di un istante, un nodo', "DELETE FROM wp_dbmt_misure WHERE 1=1 AND ricevuto < '2026-10-27 07:00:00' AND nodo = 2" === $GLOBALS['wpdb']->ultima_query );
+$GLOBALS['wpdb']->guasto = true;
+check( 'errore del database: false, non 0', false === DBMT_Pulizia::elimina( null, 0 ) );
+$GLOBALS['wpdb']->guasto = false;
 
 // ------------------------------------------------------------- Report -----
 echo "\n$pass passati, $fail falliti\n";

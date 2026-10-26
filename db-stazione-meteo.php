@@ -3,7 +3,7 @@
  * Plugin Name: DB Stazione Meteo
  * Plugin URI: https://www.davidebertolino.it/progetti/
  * Description: Riceve le misure della stazione meteo LoRa della scuola, inviate dal Raspberry, e le mostra sul sito: ultimi valori e andamento.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: Davide Bertolino
  * Author URI: https://www.davidebertolino.it
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'DBMT_VERSION', '0.1.0' );
+define( 'DBMT_VERSION', '0.2.0' );
 define( 'DBMT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DBMT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'DBMT_PLUGIN_FILE', __FILE__ );
@@ -35,6 +35,7 @@ require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-validazione.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-token.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-meteo.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-serie.php';
+require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-pulizia.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-rest.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-admin.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-shortcode.php';

@@ -6,6 +6,7 @@
  * - quota della scuola (predefinita 395 m), per la pressione riportata al
  *   livello del mare: nel database resta quella misurata sul posto
  * - stato: ultimo invio del bridge, ultima misura per nodo
+ * - pulizia: eliminazione delle misure, tutte o fino a un istante (DBMT_Pulizia)
  *
  * @package DB_Stazione_Meteo
  */
@@ -19,12 +20,14 @@ class DBMT_Admin {
 	const SLUG          = 'db-stazione-meteo';
 	const NONCE         = 'dbmt_settings_nonce';
 	const NONCE_TOKEN   = 'dbmt_token_nonce';
+	const NONCE_PULIZIA = 'dbmt_pulizia_nonce';
 	const QUOTA_DEFAULT = 395;
 
 	public static function register() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_post_dbmt_token', array( __CLASS__, 'gestisci_token' ) );
+		add_action( 'admin_post_dbmt_pulizia', array( __CLASS__, 'gestisci_pulizia' ) );
 	}
 
 	public static function menu() {
@@ -71,6 +74,37 @@ class DBMT_Admin {
 		exit;
 	}
 
+	/**
+	 * Elimina le misure (admin-post.php) e torna alla pagina con l'esito.
+	 */
+	public static function gestisci_pulizia() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permessi insufficienti.', 'db-stazione-meteo' ), 403 );
+		}
+		check_admin_referer( self::NONCE_PULIZIA );
+
+		$ambito = isset( $_POST['ambito'] ) ? sanitize_key( wp_unslash( $_POST['ambito'] ) ) : '';
+		$nodo   = isset( $_POST['nodo'] ) ? absint( $_POST['nodo'] ) : 0;
+		$limite = null;
+		if ( 'prima' === $ambito ) {
+			$valore = isset( $_POST['prima_di'] ) ? sanitize_text_field( wp_unslash( $_POST['prima_di'] ) ) : '';
+			$limite = DBMT_Pulizia::limite_utc( $valore, wp_timezone() );
+			if ( null === $limite ) {
+				self::torna( array( 'dbmt_pulizia' => 'data' ) );
+			}
+		} elseif ( 'tutte' !== $ambito ) {
+			self::torna( array( 'dbmt_pulizia' => 'ambito' ) );
+		}
+
+		$n = DBMT_Pulizia::elimina( $limite, $nodo );
+		self::torna( false === $n ? array( 'dbmt_pulizia' => 'db' ) : array( 'dbmt_eliminate' => $n ) );
+	}
+
+	private static function torna( array $arg ) {
+		wp_safe_redirect( add_query_arg( $arg, admin_url( 'options-general.php?page=' . self::SLUG ) ) . '#dbmt-pulizia' );
+		exit;
+	}
+
 	public static function maybe_save() {
 		if ( ! isset( $_POST[ self::NONCE ] ) || ! wp_verify_nonce( sanitize_key( $_POST[ self::NONCE ] ), self::NONCE ) ) {
 			return false;
@@ -105,6 +139,31 @@ class DBMT_Admin {
 			<?php if ( $saved ) : ?>
 				<div class="db-ui-alert db-ui-alert-success"><?php esc_html_e( 'Impostazioni salvate.', 'db-stazione-meteo' ); ?></div>
 			<?php endif; ?>
+
+			<?php
+			// Esito della pulizia, dopo il ritorno da admin-post.php (solo lettura)
+			// phpcs:disable WordPress.Security.NonceVerification.Recommended
+			if ( isset( $_GET['dbmt_eliminate'] ) ) :
+				?>
+				<div class="db-ui-alert db-ui-alert-success">
+					<?php
+					$n = absint( $_GET['dbmt_eliminate'] );
+					/* translators: %s: numero di misure */
+					printf( esc_html( _n( 'Eliminata %s misura.', 'Eliminate %s misure.', $n, 'db-stazione-meteo' ) ), esc_html( number_format_i18n( $n ) ) );
+					?>
+				</div>
+			<?php elseif ( isset( $_GET['dbmt_pulizia'] ) ) : ?>
+				<div class="db-ui-alert db-ui-alert-danger">
+					<?php
+					echo 'db' === $_GET['dbmt_pulizia']
+						? esc_html__( 'Errore del database: nessuna misura eliminata.', 'db-stazione-meteo' )
+						: esc_html__( 'Data e ora non valide: nessuna misura eliminata.', 'db-stazione-meteo' );
+					?>
+				</div>
+				<?php
+			endif;
+			// phpcs:enable
+			?>
 
 			<?php if ( '' === get_option( 'timezone_string' ) && 0.0 === (float) get_option( 'gmt_offset' ) ) : ?>
 				<div class="db-ui-alert db-ui-alert-warning">
@@ -180,7 +239,73 @@ class DBMT_Admin {
 					<button type="submit" class="db-ui-btn db-ui-btn-primary"><?php esc_html_e( 'Salva', 'db-stazione-meteo' ); ?></button>
 				</div>
 			</form>
+
+			<?php self::render_pulizia(); ?>
 		</div>
+		<?php
+	}
+
+	private static function render_pulizia() {
+		$nodi = DBMT_Pulizia::riepilogo();
+		$fmt  = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+		?>
+		<h2 id="dbmt-pulizia"><?php esc_html_e( 'Pulizia dati', 'db-stazione-meteo' ); ?></h2>
+		<?php if ( ! $nodi ) : ?>
+			<p><?php esc_html_e( 'Non ci sono misure salvate.', 'db-stazione-meteo' ); ?></p>
+			<?php
+			return;
+		endif;
+		?>
+		<p>
+			<?php
+			foreach ( $nodi as $n ) {
+				printf(
+					/* translators: 1: numero del nodo, 2: misure, 3: data e ora della prima, 4: data e ora dell'ultima */
+					esc_html__( 'Nodo %1$d: %2$s misure, dal %3$s al %4$s.', 'db-stazione-meteo' ) . '<br>',
+					(int) $n->nodo,
+					esc_html( number_format_i18n( (int) $n->n ) ),
+					esc_html( wp_date( $fmt, strtotime( $n->prima . ' UTC' ) ) ),
+					esc_html( wp_date( $fmt, strtotime( $n->ultima . ' UTC' ) ) )
+				);
+			}
+			?>
+		</p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+			onsubmit="return confirm('<?php echo esc_js( __( 'Le misure eliminate non si possono recuperare. Continuare?', 'db-stazione-meteo' ) ); ?>');">
+			<?php wp_nonce_field( self::NONCE_PULIZIA ); ?>
+			<input type="hidden" name="action" value="dbmt_pulizia">
+			<table class="form-table">
+				<tr>
+					<th><?php esc_html_e( 'Quali misure', 'db-stazione-meteo' ); ?></th>
+					<td>
+						<fieldset>
+							<label><input type="radio" name="ambito" value="prima" checked>
+								<?php esc_html_e( 'ricevute prima di', 'db-stazione-meteo' ); ?></label>
+							<input type="datetime-local" name="prima_di" value="<?php echo esc_attr( wp_date( 'Y-m-d\TH:i' ) ); ?>" aria-label="<?php esc_attr_e( 'Data e ora', 'db-stazione-meteo' ); ?>">
+							<br>
+							<label><input type="radio" name="ambito" value="tutte">
+								<?php esc_html_e( 'tutte', 'db-stazione-meteo' ); ?></label>
+						</fieldset>
+						<p class="description"><?php esc_html_e( 'Per esempio, per togliere le misure delle prove fatte prima dell\'installazione: la data e l\'ora da cui tenerle.', 'db-stazione-meteo' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="dbmt_pulizia_nodo"><?php esc_html_e( 'Nodo', 'db-stazione-meteo' ); ?></label></th>
+					<td>
+						<select id="dbmt_pulizia_nodo" name="nodo">
+							<option value="0"><?php esc_html_e( 'tutti', 'db-stazione-meteo' ); ?></option>
+							<?php foreach ( $nodi as $n ) : ?>
+								<?php /* translators: %d: numero del nodo */ ?>
+								<option value="<?php echo (int) $n->nodo; ?>"><?php echo esc_html( sprintf( __( 'Nodo %d', 'db-stazione-meteo' ), (int) $n->nodo ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</td>
+				</tr>
+			</table>
+			<div class="db-ui-actions">
+				<button type="submit" class="db-ui-btn db-ui-btn-danger"><?php esc_html_e( 'Elimina le misure', 'db-stazione-meteo' ); ?></button>
+			</div>
+		</form>
 		<?php
 	}
 
