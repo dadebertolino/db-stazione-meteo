@@ -34,6 +34,7 @@ require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-db.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-validazione.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-token.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-meteo.php';
+require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-serie.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-rest.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-admin.php';
 require_once DBMT_PLUGIN_DIR . 'inc/class-dbmt-shortcode.php';

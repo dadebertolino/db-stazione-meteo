@@ -1,6 +1,6 @@
 <?php
 /**
- * DBMT_Shortcode — [dbmt_meteo] e [dbmt_meteo nodo="2"]
+ * DBMT_Shortcode — [dbmt_meteo], [dbmt_meteo nodo="2"] e [dbmt_grafici]
  *
  * Ultimi valori di ogni nodo (temperatura, umidità, pressione riportata al
  * livello del mare) con l'ora della misura, e la temperatura minima e
@@ -25,6 +25,78 @@ class DBMT_Shortcode {
 
 	public static function register() {
 		add_shortcode( 'dbmt_meteo', array( __CLASS__, 'render' ) );
+		add_shortcode( 'dbmt_grafici', array( __CLASS__, 'render_grafici' ) );
+	}
+
+	/**
+	 * [dbmt_grafici periodo="24h|7g|30g"] — contenitore dei grafici, disegnati
+	 * da assets/js/grafici.js con i dati di GET /dbmt/v1/serie.
+	 */
+	public static function render_grafici( $atts ) {
+		$atts    = shortcode_atts( array( 'periodo' => '24h' ), $atts, 'dbmt_grafici' );
+		$periodo = isset( DBMT_Serie::PERIODI[ $atts['periodo'] ] ) ? $atts['periodo'] : '24h';
+
+		wp_enqueue_style( 'dbmt-frontend', DBMT_PLUGIN_URL . 'assets/css/frontend.css', array(), DBMT_VERSION );
+		wp_enqueue_script( 'dbmt-grafici', DBMT_PLUGIN_URL . 'assets/js/grafici.js', array(), DBMT_VERSION, array( 'in_footer' => true, 'strategy' => 'defer' ) );
+
+		$periodi = array(
+			'24h' => __( 'ultime 24 ore', 'db-stazione-meteo' ),
+			'7g'  => __( 'ultimi 7 giorni', 'db-stazione-meteo' ),
+			'30g' => __( 'ultimi 30 giorni', 'db-stazione-meteo' ),
+		);
+		$etichette = array(
+			'24h' => __( '24 ore', 'db-stazione-meteo' ),
+			'7g'  => __( '7 giorni', 'db-stazione-meteo' ),
+			'30g' => __( '30 giorni', 'db-stazione-meteo' ),
+		);
+		$testi = array(
+			'temperatura'     => __( 'Temperatura', 'db-stazione-meteo' ),
+			'umidita'         => __( 'Umidità', 'db-stazione-meteo' ),
+			'pressione'       => __( 'Pressione', 'db-stazione-meteo' ),
+			'livelloMare'     => __( 'al livello del mare', 'db-stazione-meteo' ),
+			/* translators: %d: numero del nodo */
+			'nodo'            => __( 'Nodo %d', 'db-stazione-meteo' ),
+			'ora'             => __( 'Ora', 'db-stazione-meteo' ),
+			'mostraTabella'   => __( 'Mostra i dati in tabella', 'db-stazione-meteo' ),
+			'nascondiTabella' => __( 'Nascondi la tabella', 'db-stazione-meteo' ),
+			/* translators: %s: periodo, es. "ultime 24 ore" */
+			'didascalia'      => __( 'Medie delle misure, %s', 'db-stazione-meteo' ),
+			/* translators: 1: valore minimo, 2: valore massimo */
+			'daA'             => __( 'da %1$s a %2$s', 'db-stazione-meteo' ),
+			'nessunDato'      => __( 'Nessuna misura in questo periodo.', 'db-stazione-meteo' ),
+			'errore'          => __( 'Grafici non disponibili in questo momento.', 'db-stazione-meteo' ),
+		);
+		foreach ( $periodi as $k => $v ) {
+			$testi[ 'periodo_' . $k ] = $v;
+		}
+
+		// Intl vuole un fuso IANA: un sito impostato su "UTC+0" diventa "UTC"
+		$fuso = wp_timezone_string();
+		if ( '+00:00' === $fuso ) {
+			$fuso = 'UTC';
+		}
+
+		ob_start();
+		?>
+		<div class="dbmt-grafici"
+			data-url="<?php echo esc_url( rest_url( DBMT_Rest::NS . '/serie' ) ); ?>"
+			data-periodo="<?php echo esc_attr( $periodo ); ?>"
+			data-locale="<?php echo esc_attr( str_replace( '_', '-', get_locale() ) ); ?>"
+			data-fuso="<?php echo esc_attr( $fuso ); ?>"
+			data-testi="<?php echo esc_attr( wp_json_encode( $testi ) ); ?>">
+			<div class="dbmt-periodi" role="group" aria-label="<?php esc_attr_e( 'Periodo', 'db-stazione-meteo' ); ?>">
+				<?php foreach ( $etichette as $k => $v ) : ?>
+					<button type="button" data-periodo-btn="<?php echo esc_attr( $k ); ?>" aria-pressed="<?php echo $k === $periodo ? 'true' : 'false'; ?>"><?php echo esc_html( $v ); ?></button>
+				<?php endforeach; ?>
+			</div>
+			<div class="dbmt-legenda" hidden></div>
+			<div class="dbmt-pannelli"></div>
+			<button type="button" class="dbmt-tabella-btn" aria-expanded="false"><?php esc_html_e( 'Mostra i dati in tabella', 'db-stazione-meteo' ); ?></button>
+			<div class="dbmt-tabella" hidden></div>
+			<noscript><p><?php esc_html_e( 'Per vedere i grafici serve JavaScript.', 'db-stazione-meteo' ); ?></p></noscript>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**

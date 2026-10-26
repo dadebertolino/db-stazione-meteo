@@ -16,4 +16,6 @@ $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dbmt_misure" ); // phpcs:igno
 foreach ( array( 'dbmt_db_version', 'dbmt_settings', 'dbmt_token_hash', 'dbmt_ultimo_invio' ) as $dbmt_option ) {
 	delete_option( $dbmt_option );
 }
-delete_transient( 'dbmt_ultime' );
+foreach ( array( 'dbmt_ultime', 'dbmt_serie_24h', 'dbmt_serie_7g', 'dbmt_serie_30g' ) as $dbmt_transient ) {
+	delete_transient( $dbmt_transient );
+}

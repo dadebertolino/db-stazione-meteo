@@ -70,3 +70,214 @@
 .dbmt-vecchio .dbmt-valori dd {
 	opacity: 0.6;
 }
+
+/* ---------------------------------------------------- [dbmt_grafici] ---- */
+
+/* Colori dei nodi (nodo 1 → s1, nodo 2 → s2…): palette categoriale
+   verificata per daltonismo e contrasto sulle superfici chiare. Testi,
+   assi e griglia usano il colore del testo del tema, mai quello dei nodi. */
+.dbmt-grafici {
+	--dbmt-s1: #2a78d6;
+	--dbmt-s2: #eb6834;
+	--dbmt-s3: #1baf7a;
+	--dbmt-s4: #eda100;
+	--dbmt-s5: #e87ba4;
+	--dbmt-s6: #008300;
+	--dbmt-s7: #6250d6;
+	--dbmt-s8: #e34948;
+	margin: 1.5em 0;
+}
+
+.dbmt-grafici.dbmt-carica .dbmt-pannelli {
+	opacity: 0.5;
+	transition: opacity 0.2s;
+}
+
+.dbmt-periodi {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.dbmt-periodi button,
+.dbmt-tabella-btn {
+	font: inherit;
+	font-size: 0.9em;
+	color: inherit;
+	background: transparent;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 999px;
+	padding: 0.3em 0.9em;
+	cursor: pointer;
+}
+
+.dbmt-periodi button[aria-pressed="true"] {
+	font-weight: 600;
+	border-color: currentColor;
+}
+
+.dbmt-periodi button:focus-visible,
+.dbmt-tabella-btn:focus-visible,
+.dbmt-pannello svg:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+.dbmt-legenda {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	font-size: 0.9em;
+	margin-bottom: 0.5rem;
+}
+
+.dbmt-voce svg {
+	margin-right: 0.35em;
+	vertical-align: middle;
+}
+
+.dbmt-pannelli {
+	position: relative;
+}
+
+.dbmt-pannello {
+	margin: 0 0 0.75rem;
+}
+
+.dbmt-pannello figcaption {
+	font-size: 0.9em;
+	font-weight: 600;
+}
+
+.dbmt-pannello figcaption .dbmt-nota {
+	display: inline;
+	font-size: 1em;
+	font-weight: normal;
+	opacity: 0.75;
+}
+
+.dbmt-pannello svg {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	overflow: visible;
+	touch-action: pan-y;
+}
+
+.dbmt-griglia {
+	stroke: currentColor;
+	stroke-opacity: 0.15;
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.dbmt-asse {
+	fill: currentColor;
+	fill-opacity: 0.7;
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.dbmt-linea {
+	fill: none;
+	stroke-width: 2;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+}
+
+.dbmt-fascia {
+	fill-opacity: 0.12;
+	stroke: none;
+}
+
+.dbmt-valore {
+	fill: currentColor;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.dbmt-cross-linea {
+	stroke: currentColor;
+	stroke-opacity: 0.5;
+	stroke-width: 1;
+}
+
+.dbmt-tooltip {
+	position: absolute;
+	z-index: 2;
+	min-width: 9rem;
+	padding: 0.5rem 0.75rem;
+	font-size: 0.85em;
+	line-height: 1.4;
+	color: CanvasText;
+	background: Canvas;
+	border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+	border-radius: 0.375rem;
+	box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+	pointer-events: none;
+}
+
+.dbmt-tooltip-ora {
+	opacity: 0.75;
+	margin-bottom: 0.25rem;
+}
+
+.dbmt-tooltip-nodo {
+	margin-top: 0.25rem;
+	opacity: 0.75;
+}
+
+.dbmt-tooltip-nodo svg {
+	margin-right: 0.35em;
+}
+
+.dbmt-tooltip-riga span {
+	opacity: 0.75;
+}
+
+.dbmt-tabella {
+	max-height: 24rem;
+	overflow: auto;
+	margin-top: 0.75rem;
+}
+
+.dbmt-tabella table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9em;
+	font-variant-numeric: tabular-nums;
+}
+
+.dbmt-tabella caption {
+	text-align: left;
+	font-weight: 600;
+	padding-bottom: 0.25rem;
+}
+
+.dbmt-tabella th,
+.dbmt-tabella td {
+	padding: 0.25rem 0.5rem;
+	border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	text-align: right;
+}
+
+.dbmt-tabella thead th {
+	vertical-align: bottom;
+}
+
+.dbmt-tabella th[scope="colgroup"] {
+	text-align: center;
+}
+
+/* La colonna dell'ora resta ferma mentre la tabella scorre in orizzontale */
+.dbmt-tabella th[scope="row"],
+.dbmt-tabella thead th:first-child {
+	position: sticky;
+	left: 0;
+	text-align: left;
+	font-weight: normal;
+	white-space: nowrap;
+	background: Canvas;
+	color: CanvasText;
+}

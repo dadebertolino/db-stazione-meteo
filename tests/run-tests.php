@@ -68,6 +68,7 @@ require __DIR__ . '/../inc/class-dbmt-token.php';
 require __DIR__ . '/../inc/class-dbmt-db.php';
 require __DIR__ . '/../inc/class-dbmt-rest.php';
 require __DIR__ . '/../inc/class-dbmt-meteo.php';
+require __DIR__ . '/../inc/class-dbmt-serie.php';
 
 $pass = 0;
 $fail = 0;
@@ -215,6 +216,26 @@ check( 'scuola, 395 m: 964,5 hPa a 18,3 °C → 1010,0', '1010.0' === sprintf( '
 check( 'a quota 0 non cambia', abs( DBMT_Meteo::pressione_slm( 1013.25, 0, 20.0 ) - 1013.25 ) < 1e-9 );
 check( 'più freddo: correzione maggiore', DBMT_Meteo::pressione_slm( 964.5, 395, -5.0 ) > DBMT_Meteo::pressione_slm( 964.5, 395, 30.0 ) );
 check( 'senza temperatura: atmosfera standard (15 °C)', DBMT_Meteo::pressione_slm( 964.5, 395 ) === DBMT_Meteo::pressione_slm( 964.5, 395, 15.0 ) );
+
+// ------------------------------------------------------------- Serie -----
+echo "Serie per i grafici\n";
+// Righe come le restituisce MySQL: stringhe, NULL per i valori mancanti
+$righe = array(
+	array( 'nodo' => '2', 'tipo' => 'bme280', 'b' => '2988241', 't' => '18.185', 'tmin' => '18.18', 'tmax' => '18.19', 'u' => '60.205', 'umin' => '60.2', 'umax' => '60.21', 'p' => '962.6', 'pmin' => '962.6', 'pmax' => '962.7' ),
+	array( 'nodo' => '2', 'tipo' => 'bme280', 'b' => '2988243', 't' => null, 'tmin' => null, 'tmax' => null, 'u' => null, 'umin' => null, 'umax' => null, 'p' => '962.5', 'pmin' => '962.5', 'pmax' => '962.5' ),
+	array( 'nodo' => '1', 'tipo' => 'sht45', 'b' => '2988241', 't' => '12.5', 'tmin' => '12.5', 'tmax' => '12.5', 'u' => '80.1', 'umin' => '80.1', 'umax' => '80.1', 'p' => null, 'pmin' => null, 'pmax' => null ),
+);
+$nodi = DBMT_Serie::componi( $righe, 600, 395 );
+check( 'un elemento per nodo, nell\'ordine delle righe', 2 === count( $nodi ) && 2 === $nodi[0]['nodo'] && 'sht45' === $nodi[1]['tipo'] );
+$p0 = $nodi[0]['punti'][0];
+check( 'istante al centro dell\'intervallo', 2988241 * 600 + 300 === $p0[0] );
+check( 'medie arrotondate: temperatura 2 decimali, umidità 1', 18.19 === $p0[1] && 60.2 === $p0[4] );
+check( 'pressione riportata al livello del mare', $p0[7] > 1000 && $p0[7] < 1015 );
+$p1 = $nodi[0]['punti'][1];
+check( 'sensore guasto: null, non zero', null === $p1[1] && null === $p1[4] );
+check( 'senza temperatura la pressione usa i 15 °C standard', round( DBMT_Meteo::pressione_slm( 962.5, 395 ), 1 ) === $p1[7] );
+check( 'intervallo vuoto non inventato: punti 1 e 3, non 2', 2988243 * 600 + 300 === $p1[0] );
+check( 'nodo sht45: pressione null', null === $nodi[1]['punti'][0][7] );
 
 // ------------------------------------------------------------- Report -----
 echo "\n$pass passati, $fail falliti\n";
