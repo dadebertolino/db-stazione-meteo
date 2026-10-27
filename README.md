@@ -3,7 +3,7 @@
 Mostra sul sito della scuola le misure della stazione meteo LoRa: ultimi valori e andamento.
 Niente servizi esterni, niente registrazioni, niente abbonamenti.
 
-**Versione:** 0.2.0  
+**Versione:** 0.3.0  
 **Autore:** [Davide Bertolino](https://www.davidebertolino.it)  
 **Licenza:** GPL v2 or later  
 **Richiede:** WordPress 5.8+, PHP 7.4+  
@@ -31,11 +31,13 @@ Il bridge è nel repository del progetto, [dadebertolino/stazione-meteo-lora](ht
 | `inc/class-dbmt-rest.php` | endpoint `POST /dbmt/v1/misure`: ricezione dal bridge, con token |
 | `inc/class-dbmt-validazione.php` | controllo di ogni misura, campo per campo |
 | `inc/class-dbmt-token.php` | token del bridge: nel database solo l'hash |
-| `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token, quota, stato, pulizia dati |
+| `inc/class-dbmt-admin.php` | Impostazioni → Stazione Meteo: token del bridge, quota, stato, token di lettura, pulizia dati |
 | `inc/class-dbmt-shortcode.php` | shortcode `[dbmt_meteo]` (ultimi valori) e `[dbmt_grafici]` (andamento) |
 | `inc/class-dbmt-serie.php` | serie aggregate per i grafici: `GET /dbmt/v1/serie` |
 | `inc/class-dbmt-meteo.php` | pressione riportata al livello del mare |
 | `inc/class-dbmt-pulizia.php` | pulizia dati: eliminazione delle misure, tutte o fino a un istante |
+| `inc/class-dbmt-api.php` | API di lettura: `GET /dbmt/v1/dati` e `/nodi`, JSON e CSV |
+| `inc/class-dbmt-token-lettura.php` | token di lettura con nome, revocabili uno per uno |
 | `assets/js/grafici.js` | grafici SVG, senza librerie né CDN |
 | `assets/css/db-admin-ui.css` | design system admin condiviso |
 | `uninstall.php` | rimuove tabella e opzioni |
@@ -55,6 +57,54 @@ Il bridge è nel repository del progetto, [dadebertolino/stazione-meteo-lora](ht
 Sono disegnati in SVG da `assets/js/grafici.js`, senza librerie e senza CDN: la pagina della scuola non fa richieste a server esterni. Si aggiornano da soli ogni 5 minuti.
 
 **Le serie** arrivano già aggregate da `GET /wp-json/dbmt/v1/serie?periodo=24h|7g|30g`, pubblico e in sola lettura: medie a 10 minuti (24 ore), a un'ora (7 giorni), a 3 ore (30 giorni), quindi al massimo qualche centinaio di punti anche dopo anni di dati. In cache da 1 a 15 minuti secondo il periodo.
+
+## API di lettura
+
+Per leggere le misure da un'altra applicazione, da un programma o da un foglio di calcolo. Serve un **token di lettura**, da generare in Impostazioni → Stazione Meteo → Accesso ai dati: ognuno ha un nome (per esempio "Classe 4AEE"), si vede una volta sola e si revoca da solo. Il token del bridge non vale per leggere, e un token di lettura non permette di inviare misure.
+
+Il token va nell'header `X-DBMT-Token` (o `Authorization: Bearer`). Si può passare anche nell'indirizzo con `?token=…`, perché `IMPORTDATA` di Fogli Google ed Excel da Web non sanno aggiungere header; ma un indirizzo con il token finisce in cronologia e nei log, e chi lo vede può leggere i dati come il titolare del token.
+
+### `GET /wp-json/dbmt/v1/dati`
+
+| Parametro | Valori | |
+|---|---|---|
+| `da`, `a` | `2026-10-27` (mezzanotte), `2026-10-27T08:00` (ora del sito), `2026-10-27T07:00:00Z` (UTC) | `da` incluso, `a` escluso |
+| `nodo` | 1-15 | tutti, se manca |
+| `formato` | `json` (predefinito), `csv` (virgola e punto: Fogli Google, Python, R), `csv-it` (punto e virgola e virgola decimale: Excel in italiano) | |
+| `limite` | 1-5000, predefinito 1000 | misure per pagina |
+| `dopo` | il valore di `successivo` della pagina precedente | |
+
+Le misure sono in ordine cronologico. Se ce ne sono altre, la risposta JSON ha `successivo` e `pagina_successiva` (l'indirizzo pronto, senza il token); in CSV le stesse informazioni sono negli header `X-DBMT-Successivo` e `Link`.
+
+```json
+{
+  "misure": [
+    { "id": 97, "ricevuto": "2026-10-25T16:45:26Z", "ora_locale": "2026-10-25T17:45:26+01:00",
+      "nodo": 2, "tipo": "bme280", "seq": 182, "reset": null,
+      "temp_c": 18.25, "ur_pct": 60.42, "press_hpa": 962.8, "press_slm_hpa": 1008.2,
+      "vbat_mv": 3000, "vbat_tx_mv": 3000, "rssi": -56, "snr": 13 }
+  ],
+  "quota_m": 395,
+  "successivo": "20261025172423-176",
+  "pagina_successiva": "https://…/wp-json/dbmt/v1/dati?limite=80&dopo=20261025172423-176"
+}
+```
+
+`press_hpa` è la pressione misurata sul posto, `press_slm_hpa` quella riportata al livello del mare con la quota delle impostazioni. `null` = misura non disponibile.
+
+### `GET /wp-json/dbmt/v1/nodi`
+
+```json
+{ "nodi": [ { "nodo": 2, "tipo": "bme280", "misure": 194, "prima": "2026-10-25T16:45:26Z", "ultima": "2026-10-25T18:20:53Z" } ] }
+```
+
+### Esempi
+
+```bash
+curl -H "X-DBMT-Token: dbmtl_…" "https://…/wp-json/dbmt/v1/dati?da=2026-10-27&a=2026-10-28"
+```
+
+Fogli Google, in una cella: `=IMPORTDATA("https://…/wp-json/dbmt/v1/dati?formato=csv&da=2026-10-27&token=dbmtl_…")`
 
 ## Dati
 

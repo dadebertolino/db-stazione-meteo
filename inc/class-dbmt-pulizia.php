@@ -64,6 +64,6 @@ class DBMT_Pulizia {
 	 */
 	public static function riepilogo() {
 		global $wpdb;
-		return $wpdb->get_results( 'SELECT nodo, COUNT(*) AS n, MIN(ricevuto) AS prima, MAX(ricevuto) AS ultima FROM ' . DBMT_DB::table() . ' GROUP BY nodo ORDER BY nodo' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		return $wpdb->get_results( 'SELECT nodo, MAX(tipo) AS tipo, COUNT(*) AS n, MIN(ricevuto) AS prima, MAX(ricevuto) AS ultima FROM ' . DBMT_DB::table() . ' GROUP BY nodo ORDER BY nodo' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
 }

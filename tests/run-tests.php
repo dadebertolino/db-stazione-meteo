@@ -73,6 +73,8 @@ require __DIR__ . '/../inc/class-dbmt-rest.php';
 require __DIR__ . '/../inc/class-dbmt-meteo.php';
 require __DIR__ . '/../inc/class-dbmt-serie.php';
 require __DIR__ . '/../inc/class-dbmt-pulizia.php';
+require __DIR__ . '/../inc/class-dbmt-token-lettura.php';
+require __DIR__ . '/../inc/class-dbmt-api.php';
 
 $pass = 0;
 $fail = 0;
@@ -258,6 +260,60 @@ check( 'prima di un istante, un nodo', "DELETE FROM wp_dbmt_misure WHERE 1=1 AND
 $GLOBALS['wpdb']->guasto = true;
 check( 'errore del database: false, non 0', false === DBMT_Pulizia::elimina( null, 0 ) );
 $GLOBALS['wpdb']->guasto = false;
+
+// -------------------------------------------------- Token di lettura -----
+echo "Token di lettura\n";
+DBMT_Token::genera(); // c'è anche il token del bridge
+$bridge = DBMT_Token::genera();
+$l1     = DBMT_Token_Lettura::genera( 'Classe 4AEE' );
+$l2     = DBMT_Token_Lettura::genera( 'Foglio di calcolo' );
+check( 'prefisso dbmtl_ e 40 cifre esadecimali', 1 === preg_match( '/^dbmtl_[0-9a-f]{40}$/', $l1 ) );
+check( 'due token, con il loro nome', array( 'Classe 4AEE', 'Foglio di calcolo' ) === array_column( DBMT_Token_Lettura::elenco(), 'nome' ) );
+check( 'nel database solo l\'hash', false === strpos( serialize( get_option( 'dbmt_token_lettura' ) ), $l1 ) );
+$id1 = DBMT_Token_Lettura::verifica( $l1 );
+check( 'token giusto: restituisce il suo id', is_string( $id1 ) && isset( DBMT_Token_Lettura::elenco()[ $id1 ] ) );
+check( 'il token del bridge non vale per leggere', false === DBMT_Token_Lettura::verifica( $bridge ) );
+check( 'token sbagliato o vuoto: rifiutato', false === DBMT_Token_Lettura::verifica( $l1 . 'x' ) && false === DBMT_Token_Lettura::verifica( null ) );
+DBMT_Token_Lettura::registra_uso( $id1, 1000000 );
+DBMT_Token_Lettura::registra_uso( $id1, 1000100 );
+check( 'ultimo uso aggiornato al massimo una volta all\'ora', 1000000 === DBMT_Token_Lettura::elenco()[ $id1 ]['ultimo_uso'] );
+DBMT_Token_Lettura::revoca( $id1 );
+check( 'revocato: rifiutato, l\'altro vale ancora', false === DBMT_Token_Lettura::verifica( $l1 ) && false !== DBMT_Token_Lettura::verifica( $l2 ) );
+
+// ---------------------------------------------------------------- API -----
+echo "API di lettura\n";
+$roma = new DateTimeZone( 'Europe/Rome' );
+check( 'giorno: mezzanotte ora del sito', '2026-10-26 23:00:00' === DBMT_Api::istante( '2026-10-27', $roma ) );
+check( 'ora del sito', '2026-10-27 07:00:00' === DBMT_Api::istante( '2026-10-27T08:00', $roma ) );
+check( 'ora del sito con i secondi', '2026-10-27 07:00:30' === DBMT_Api::istante( '2026-10-27T08:00:30', $roma ) );
+check( 'UTC con Z', '2026-10-27 07:00:00' === DBMT_Api::istante( '2026-10-27T07:00:00Z', $roma ) );
+check( 'fuso esplicito', '2026-10-27 07:00:00' === DBMT_Api::istante( '2026-10-27T09:00:00+02:00', $roma ) );
+check( '+ diventato spazio nell\'indirizzo', '2026-10-27 07:00:00' === DBMT_Api::istante( '2026-10-27T08:00:00 01:00', $roma ) );
+check( 'data impossibile o testo: null', null === DBMT_Api::istante( '2026-02-30', $roma ) && null === DBMT_Api::istante( 'ieri', $roma ) );
+
+$c = DBMT_Api::cursore( '2026-10-27 07:00:00', 123 );
+check( 'cursore leggibile', '20261027070000-123' === $c && array( '2026-10-27 07:00:00', 123 ) === DBMT_Api::cursore_leggi( $c ) );
+check( 'cursore manomesso: null', null === DBMT_Api::cursore_leggi( '20261327070000-1' ) && null === DBMT_Api::cursore_leggi( "1' OR 1=1" ) );
+
+list( $sql, $val ) = DBMT_Api::query( 'wp_dbmt_misure', array( 'da' => '2026-10-26 23:00:00' ), 2, array( '2026-10-27 07:00:00', 123 ), 1000 );
+check( 'query: filtri, cursore, ordine cronologico, una riga in più',
+	"SELECT * FROM wp_dbmt_misure WHERE 1=1 AND ricevuto >= %s AND nodo = %d AND (ricevuto > %s OR (ricevuto = %s AND id > %d)) ORDER BY ricevuto, id LIMIT %d" === $sql
+	&& array( '2026-10-26 23:00:00', 2, '2026-10-27 07:00:00', '2026-10-27 07:00:00', 123, 1001 ) === $val );
+
+$riga = array( 'id' => '7', 'ricevuto' => '2026-10-27 07:00:00', 'nodo' => '2', 'tipo' => 'bme280', 'seq' => '41', 'reset_causa' => null,
+	'temp_c' => '12.80', 'ur_pct' => '59.20', 'press_hpa' => '967.0', 'vbat_mv' => '3000', 'vbat_tx_mv' => null, 'rssi' => '-51', 'snr' => '12' );
+$m = DBMT_Api::misura( $riga, 395, $roma );
+check( 'misura: tipi giusti e null veri', 7 === $m['id'] && 12.8 === $m['temp_c'] && null === $m['reset'] && null === $m['vbat_tx_mv'] && -51 === $m['rssi'] );
+check( 'misura: ora UTC e ora locale', '2026-10-27T07:00:00Z' === $m['ricevuto'] && '2026-10-27T08:00:00+01:00' === $m['ora_locale'] );
+check( 'misura: pressione anche al livello del mare', $m['press_slm_hpa'] > 1010 && $m['press_slm_hpa'] < 1016 );
+
+$csv = DBMT_Api::csv( array( $m ) );
+$r   = explode( "\r\n", $csv );
+check( 'CSV: intestazione e riga, virgola e punto', 0 === strpos( $r[0], 'id,ricevuto,ora_locale,nodo' ) && 0 === strpos( $r[1], '7,2026-10-27T07:00:00Z,2026-10-27T08:00:00+01:00,2,bme280,41,,12.8,59.2,967,' ) );
+$csvit = DBMT_Api::csv( array( $m ), true );
+$r     = explode( "\r\n", $csvit );
+check( 'CSV italiano: BOM, punto e virgola, virgola decimale, data per Excel',
+	"\u{FEFF}" === substr( $csvit, 0, 3 ) && false !== strpos( $r[1], ';2026-10-27 08:00:00;2;bme280;41;;12,8;59,2;967;' ) );
 
 // ------------------------------------------------------------- Report -----
 echo "\n$pass passati, $fail falliti\n";

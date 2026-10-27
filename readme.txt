@@ -4,7 +4,7 @@ Tags: meteo, weather, stazione meteo, lora, scuola
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +17,10 @@ I nodi LoRa misurano temperatura, umidità e pressione; il ricevitore le passa v
 Niente servizi esterni, niente registrazioni, niente nag, niente trucchi.
 
 == Changelog ==
+
+= 0.3.0 =
+* API di lettura: GET /wp-json/dbmt/v1/dati (misure grezze, filtri per data e nodo, JSON o CSV, anche CSV per Excel in italiano, pagine fino a 5000 misure) e GET /wp-json/dbmt/v1/nodi.
+* Token di lettura con un nome, separati da quello del bridge: si generano e si revocano uno per uno in Impostazioni → Stazione Meteo, che mostra anche l'ultimo utilizzo.
 
 = 0.2.0 =
 * Pulizia dati in Impostazioni → Stazione Meteo: elimina tutte le misure, o quelle ricevute prima di una data e ora (nel fuso del sito), di tutti i nodi o di uno solo, con conferma.

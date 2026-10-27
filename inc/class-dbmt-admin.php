@@ -7,6 +7,7 @@
  *   livello del mare: nel database resta quella misurata sul posto
  * - stato: ultimo invio del bridge, ultima misura per nodo
  * - pulizia: eliminazione delle misure, tutte o fino a un istante (DBMT_Pulizia)
+ * - accesso ai dati: token di lettura per l'API (DBMT_Token_Lettura, DBMT_Api)
  *
  * @package DB_Stazione_Meteo
  */
@@ -21,6 +22,7 @@ class DBMT_Admin {
 	const NONCE         = 'dbmt_settings_nonce';
 	const NONCE_TOKEN   = 'dbmt_token_nonce';
 	const NONCE_PULIZIA = 'dbmt_pulizia_nonce';
+	const NONCE_LETTURA = 'dbmt_lettura_nonce';
 	const QUOTA_DEFAULT = 395;
 
 	public static function register() {
@@ -28,6 +30,7 @@ class DBMT_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_post_dbmt_token', array( __CLASS__, 'gestisci_token' ) );
 		add_action( 'admin_post_dbmt_pulizia', array( __CLASS__, 'gestisci_pulizia' ) );
+		add_action( 'admin_post_dbmt_lettura', array( __CLASS__, 'gestisci_lettura' ) );
 	}
 
 	public static function menu() {
@@ -98,6 +101,30 @@ class DBMT_Admin {
 
 		$n = DBMT_Pulizia::elimina( $limite, $nodo );
 		self::torna( false === $n ? array( 'dbmt_pulizia' => 'db' ) : array( 'dbmt_eliminate' => $n ) );
+	}
+
+	/**
+	 * Genera o revoca un token di lettura (admin-post.php). Il token nuovo
+	 * passa alla pagina come quello del bridge: un minuto, una volta sola.
+	 */
+	public static function gestisci_lettura() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permessi insufficienti.', 'db-stazione-meteo' ), 403 );
+		}
+		check_admin_referer( self::NONCE_LETTURA );
+
+		$azione = isset( $_POST['azione'] ) ? sanitize_key( wp_unslash( $_POST['azione'] ) ) : '';
+		if ( 'genera' === $azione ) {
+			$nome = isset( $_POST['nome'] ) ? sanitize_text_field( wp_unslash( $_POST['nome'] ) ) : '';
+			if ( '' === $nome ) {
+				$nome = __( 'senza nome', 'db-stazione-meteo' );
+			}
+			set_transient( 'dbmt_lettura_nuovo_' . get_current_user_id(), array( $nome, DBMT_Token_Lettura::genera( $nome ) ), MINUTE_IN_SECONDS );
+		} elseif ( 'revoca' === $azione && isset( $_POST['id'] ) ) {
+			DBMT_Token_Lettura::revoca( sanitize_key( wp_unslash( $_POST['id'] ) ) );
+		}
+		wp_safe_redirect( admin_url( 'options-general.php?page=' . self::SLUG ) . '#dbmt-api' );
+		exit;
 	}
 
 	private static function torna( array $arg ) {
@@ -240,8 +267,97 @@ class DBMT_Admin {
 				</div>
 			</form>
 
+			<?php self::render_lettura(); ?>
+
 			<?php self::render_pulizia(); ?>
 		</div>
+		<?php
+	}
+
+	private static function render_lettura() {
+		$chiave = 'dbmt_lettura_nuovo_' . get_current_user_id();
+		$nuovo  = get_transient( $chiave );
+		if ( false !== $nuovo ) {
+			delete_transient( $chiave );
+		}
+		$tokens = DBMT_Token_Lettura::elenco();
+		$fmt    = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+		$base   = rest_url( DBMT_Rest::NS );
+		?>
+		<h2 id="dbmt-api"><?php esc_html_e( 'Accesso ai dati (API)', 'db-stazione-meteo' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Token per leggere le misure da un\'altra applicazione o da un foglio di calcolo. Sono diversi dal token del bridge e non permettono di inviare misure; ognuno si revoca da solo.', 'db-stazione-meteo' ); ?>
+		</p>
+
+		<?php if ( false !== $nuovo ) : ?>
+			<div class="db-ui-alert db-ui-alert-success">
+				<p><strong>
+					<?php
+					/* translators: %s: nome del token */
+					printf( esc_html__( 'Nuovo token "%s", copialo adesso: non verrà più mostrato.', 'db-stazione-meteo' ), esc_html( $nuovo[0] ) );
+					?>
+				</strong></p>
+				<p><code class="dbmt-token"><?php echo esc_html( $nuovo[1] ); ?></code></p>
+			</div>
+		<?php endif; ?>
+
+		<?php if ( $tokens ) : ?>
+			<table class="widefat striped dbmt-stato">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Nome', 'db-stazione-meteo' ); ?></th>
+						<th><?php esc_html_e( 'Creato', 'db-stazione-meteo' ); ?></th>
+						<th><?php esc_html_e( 'Ultimo uso', 'db-stazione-meteo' ); ?></th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $tokens as $id => $t ) : ?>
+						<tr>
+							<td><?php echo esc_html( $t['nome'] ); ?></td>
+							<td><?php echo esc_html( wp_date( $fmt, $t['creato'] ) ); ?></td>
+							<td><?php echo $t['ultimo_uso'] ? esc_html( wp_date( $fmt, $t['ultimo_uso'] ) ) : esc_html__( 'mai', 'db-stazione-meteo' ); ?></td>
+							<td>
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+									onsubmit="return confirm('<?php echo esc_js( __( 'Chi usa questo token non potrà più leggere i dati. Continuare?', 'db-stazione-meteo' ) ); ?>');">
+									<?php wp_nonce_field( self::NONCE_LETTURA ); ?>
+									<input type="hidden" name="action" value="dbmt_lettura">
+									<input type="hidden" name="id" value="<?php echo esc_attr( $id ); ?>">
+									<button type="submit" name="azione" value="revoca" class="db-ui-btn db-ui-btn-sm"><?php esc_html_e( 'Revoca', 'db-stazione-meteo' ); ?></button>
+								</form>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<?php wp_nonce_field( self::NONCE_LETTURA ); ?>
+			<input type="hidden" name="action" value="dbmt_lettura">
+			<table class="form-table">
+				<tr>
+					<th><label for="dbmt_lettura_nome"><?php esc_html_e( 'Nuovo token', 'db-stazione-meteo' ); ?></label></th>
+					<td>
+						<input type="text" id="dbmt_lettura_nome" name="nome" class="regular-text" maxlength="60" placeholder="<?php esc_attr_e( 'per esempio: Classe 4AEE', 'db-stazione-meteo' ); ?>">
+						<button type="submit" name="azione" value="genera" class="db-ui-btn db-ui-btn-primary"><?php esc_html_e( 'Genera', 'db-stazione-meteo' ); ?></button>
+						<p class="description"><?php esc_html_e( 'Il nome serve a riconoscerlo nell\'elenco e a sapere chi revocare.', 'db-stazione-meteo' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th><?php esc_html_e( 'Indirizzi', 'db-stazione-meteo' ); ?></th>
+					<td>
+						<p><code><?php echo esc_html( $base . '/dati?da=2026-10-27&a=2026-10-28' ); ?></code><br>
+							<?php esc_html_e( 'misure di un giorno, in JSON; filtri anche per nodo e con l\'ora (2026-10-27T08:00)', 'db-stazione-meteo' ); ?></p>
+						<p><code><?php echo esc_html( $base . '/dati?formato=csv-it&token=…' ); ?></code><br>
+							<?php esc_html_e( 'CSV per Excel in italiano; con formato=csv per Fogli Google, Python, R', 'db-stazione-meteo' ); ?></p>
+						<p><code><?php echo esc_html( $base . '/nodi' ); ?></code><br>
+							<?php esc_html_e( 'nodi, numero di misure, prima e ultima', 'db-stazione-meteo' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Il token va nell\'header X-DBMT-Token. Si può mettere anche nell\'indirizzo (?token=…) per i fogli di calcolo che non sanno inviare header, ma un indirizzo con il token può finire nella cronologia o nei log: per chi lo riceve è come avere il token.', 'db-stazione-meteo' ); ?></p>
+					</td>
+				</tr>
+			</table>
+		</form>
 		<?php
 	}
 
