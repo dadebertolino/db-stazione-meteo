@@ -4,7 +4,7 @@ Tags: meteo, weather, stazione meteo, lora, scuola
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +17,10 @@ I nodi LoRa misurano temperatura, umidità e pressione; il ricevitore le passa v
 Niente servizi esterni, niente registrazioni, niente nag, niente trucchi.
 
 == Changelog ==
+
+= 0.4.0 =
+* Limite di richieste per ogni token di lettura: 60 all'ora se non indicato, scelto alla creazione del token (da 1 a 3600). Oltre il limite il sito risponde 429 con Retry-After fino all'ora successiva.
+* Ogni risposta dell'API di lettura porta gli header X-RateLimit-Limit, X-RateLimit-Remaining e X-RateLimit-Reset, leggibili anche dalle applicazioni web di altri siti.
 
 = 0.3.0 =
 * API di lettura: GET /wp-json/dbmt/v1/dati (misure grezze, filtri per data e nodo, JSON o CSV, anche CSV per Excel in italiano, pagine fino a 5000 misure) e GET /wp-json/dbmt/v1/nodi.

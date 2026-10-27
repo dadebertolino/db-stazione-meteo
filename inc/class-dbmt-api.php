@@ -14,6 +14,10 @@
  * (IMPORTDATA di Fogli Google, Excel da Web). Il token del bridge non vale:
  * può scrivere, e non va dato a chi deve solo leggere.
  *
+ * Limite di richieste per token, per ora intera (60 se non indicato): oltre
+ * il limite 429 con Retry-After; ogni risposta porta X-RateLimit-Limit,
+ * X-RateLimit-Remaining e X-RateLimit-Reset.
+ *
  * @package DB_Stazione_Meteo
  */
 
@@ -25,11 +29,17 @@ class DBMT_Api {
 
 	const MAX_LIMITE = 5000;
 	const FORMATI    = array( 'json', 'csv', 'csv-it' );
+	// Token e limite della richiesta in corso
+	private static $id_token = null;
+	private static $quota    = null;
+
 	const CAMPI      = array( 'id', 'ricevuto', 'ora_locale', 'nodo', 'tipo', 'seq', 'reset', 'temp_c', 'ur_pct', 'press_hpa', 'press_slm_hpa', 'vbat_mv', 'vbat_tx_mv', 'rssi', 'snr' );
 
 	public static function register() {
 		add_action( 'rest_api_init', array( __CLASS__, 'routes' ) );
 		add_filter( 'rest_pre_serve_request', array( __CLASS__, 'servi_csv' ), 10, 4 );
+		add_filter( 'rest_dispatch_request', array( __CLASS__, 'applica_limite' ), 10, 2 );
+		add_filter( 'rest_post_dispatch', array( __CLASS__, 'header_limite' ) );
 		// Per le applicazioni web di altri siti: l'header del token deve poter passare
 		add_filter(
 			'rest_allowed_cors_headers',
@@ -41,8 +51,7 @@ class DBMT_Api {
 		add_filter(
 			'rest_exposed_cors_headers',
 			function ( $h ) {
-				$h[] = 'X-DBMT-Successivo';
-				return $h;
+				return array_merge( $h, array( 'X-DBMT-Successivo', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After' ) );
 			}
 		);
 	}
@@ -109,8 +118,74 @@ class DBMT_Api {
 		if ( false === $id ) {
 			return new WP_Error( 'dbmt_token', __( 'Token di lettura mancante o non valido.', 'db-stazione-meteo' ), array( 'status' => 401 ) );
 		}
-		DBMT_Token_Lettura::registra_uso( $id, time() );
+		// Niente conteggio qui: WordPress richiama i permessi anche per l'header
+		// Allow, e ogni richiesta verrebbe contata due volte (applica_limite)
+		self::$id_token = $id;
 		return true;
+	}
+
+	/**
+	 * Conta la richiesta e la blocca oltre il limite (rest_dispatch_request:
+	 * dopo i permessi, prima della callback, una volta sola). null = la
+	 * richiesta prosegue normalmente.
+	 */
+	public static function applica_limite( $risposta, $request ) {
+		$rotte = array( '/' . DBMT_Rest::NS . '/dati', '/' . DBMT_Rest::NS . '/nodi' );
+		if ( null !== $risposta || null === self::$id_token || null !== self::$quota || ! in_array( $request->get_route(), $rotte, true ) ) {
+			return $risposta;
+		}
+		DBMT_Token_Lettura::registra_uso( self::$id_token, time() );
+		self::$quota = self::conta( self::$id_token, DBMT_Token_Lettura::limite( self::$id_token ), time() );
+		if ( ! self::$quota['ok'] ) {
+			return new WP_Error(
+				'dbmt_limite',
+				/* translators: 1: richieste all'ora, 2: minuti */
+				sprintf( __( 'Limite di %1$d richieste all\'ora raggiunto per questo token: riprovare fra %2$d minuti.', 'db-stazione-meteo' ), self::$quota['limite'], (int) ceil( self::$quota['attesa'] / 60 ) ),
+				array( 'status' => 429 )
+			);
+		}
+		return $risposta;
+	}
+
+	/**
+	 * Conta la richiesta nella finestra dell'ora in corso.
+	 *
+	 * @return array ok, limite, rimaste, reset (timestamp di fine finestra), attesa (secondi).
+	 */
+	public static function conta( $id, $limite, $adesso ) {
+		$finestra = intdiv( $adesso, 3600 );
+		$reset    = ( $finestra + 1 ) * 3600;
+		$chiave   = 'dbmt_rl_' . $id . '_' . $finestra;
+		$fatte    = (int) get_transient( $chiave );
+		$ok       = $fatte < $limite;
+		if ( $ok ) {
+			$fatte++;
+			set_transient( $chiave, $fatte, $reset - $adesso + 60 );
+		}
+		return array(
+			'ok'      => $ok,
+			'limite'  => $limite,
+			'rimaste' => max( 0, $limite - $fatte ),
+			'reset'   => $reset,
+			'attesa'  => $reset - $adesso,
+		);
+	}
+
+	/**
+	 * Header del limite sulle risposte dell'API di lettura, anche sugli errori.
+	 */
+	public static function header_limite( $risposta ) {
+		if ( null === self::$quota || ! $risposta instanceof WP_HTTP_Response ) {
+			return $risposta;
+		}
+		$q = self::$quota;
+		$risposta->header( 'X-RateLimit-Limit', (string) $q['limite'] );
+		$risposta->header( 'X-RateLimit-Remaining', (string) $q['rimaste'] );
+		$risposta->header( 'X-RateLimit-Reset', (string) $q['reset'] );
+		if ( ! $q['ok'] ) {
+			$risposta->header( 'Retry-After', (string) $q['attesa'] );
+		}
+		return $risposta;
 	}
 
 	/**

@@ -119,7 +119,11 @@ class DBMT_Admin {
 			if ( '' === $nome ) {
 				$nome = __( 'senza nome', 'db-stazione-meteo' );
 			}
-			set_transient( 'dbmt_lettura_nuovo_' . get_current_user_id(), array( $nome, DBMT_Token_Lettura::genera( $nome ) ), MINUTE_IN_SECONDS );
+			$limite = isset( $_POST['limite_ora'] ) ? absint( $_POST['limite_ora'] ) : DBMT_Token_Lettura::LIMITE_PREDEFINITO;
+			if ( $limite < 1 ) {
+				$limite = DBMT_Token_Lettura::LIMITE_PREDEFINITO;
+			}
+			set_transient( 'dbmt_lettura_nuovo_' . get_current_user_id(), array( $nome, DBMT_Token_Lettura::genera( $nome, $limite ) ), MINUTE_IN_SECONDS );
 		} elseif ( 'revoca' === $azione && isset( $_POST['id'] ) ) {
 			DBMT_Token_Lettura::revoca( sanitize_key( wp_unslash( $_POST['id'] ) ) );
 		}
@@ -308,6 +312,7 @@ class DBMT_Admin {
 						<th><?php esc_html_e( 'Nome', 'db-stazione-meteo' ); ?></th>
 						<th><?php esc_html_e( 'Creato', 'db-stazione-meteo' ); ?></th>
 						<th><?php esc_html_e( 'Ultimo uso', 'db-stazione-meteo' ); ?></th>
+						<th><?php esc_html_e( 'Richieste all\'ora', 'db-stazione-meteo' ); ?></th>
 						<th></th>
 					</tr>
 				</thead>
@@ -317,6 +322,7 @@ class DBMT_Admin {
 							<td><?php echo esc_html( $t['nome'] ); ?></td>
 							<td><?php echo esc_html( wp_date( $fmt, $t['creato'] ) ); ?></td>
 							<td><?php echo $t['ultimo_uso'] ? esc_html( wp_date( $fmt, $t['ultimo_uso'] ) ) : esc_html__( 'mai', 'db-stazione-meteo' ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( DBMT_Token_Lettura::limite( $id ) ) ); ?></td>
 							<td>
 								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 									onsubmit="return confirm('<?php echo esc_js( __( 'Chi usa questo token non potrà più leggere i dati. Continuare?', 'db-stazione-meteo' ) ); ?>');">
@@ -340,8 +346,12 @@ class DBMT_Admin {
 					<th><label for="dbmt_lettura_nome"><?php esc_html_e( 'Nuovo token', 'db-stazione-meteo' ); ?></label></th>
 					<td>
 						<input type="text" id="dbmt_lettura_nome" name="nome" class="regular-text" maxlength="60" placeholder="<?php esc_attr_e( 'per esempio: Classe 4AEE', 'db-stazione-meteo' ); ?>">
+						<label>
+							<input type="number" name="limite_ora" min="1" max="<?php echo (int) DBMT_Token_Lettura::LIMITE_MASSIMO; ?>" value="<?php echo (int) DBMT_Token_Lettura::LIMITE_PREDEFINITO; ?>" class="small-text">
+							<?php esc_html_e( 'richieste all\'ora', 'db-stazione-meteo' ); ?>
+						</label>
 						<button type="submit" name="azione" value="genera" class="db-ui-btn db-ui-btn-primary"><?php esc_html_e( 'Genera', 'db-stazione-meteo' ); ?></button>
-						<p class="description"><?php esc_html_e( 'Il nome serve a riconoscerlo nell\'elenco e a sapere chi revocare.', 'db-stazione-meteo' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Il nome serve a riconoscerlo nell\'elenco e a sapere chi revocare. Oltre il limite di richieste all\'ora il sito risponde 429 fino all\'ora successiva; 60 basta per un foglio di calcolo o un programma che legge ogni minuto.', 'db-stazione-meteo' ); ?></p>
 					</td>
 				</tr>
 				<tr>

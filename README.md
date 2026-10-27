@@ -3,7 +3,7 @@
 Mostra sul sito della scuola le misure della stazione meteo LoRa: ultimi valori e andamento.
 Niente servizi esterni, niente registrazioni, niente abbonamenti.
 
-**Versione:** 0.3.0  
+**Versione:** 0.4.0  
 **Autore:** [Davide Bertolino](https://www.davidebertolino.it)  
 **Licenza:** GPL v2 or later  
 **Richiede:** WordPress 5.8+, PHP 7.4+  
@@ -63,6 +63,12 @@ Sono disegnati in SVG da `assets/js/grafici.js`, senza librerie e senza CDN: la 
 Per leggere le misure da un'altra applicazione, da un programma o da un foglio di calcolo. Serve un **token di lettura**, da generare in Impostazioni → Stazione Meteo → Accesso ai dati: ognuno ha un nome (per esempio "Classe 4AEE"), si vede una volta sola e si revoca da solo. Il token del bridge non vale per leggere, e un token di lettura non permette di inviare misure.
 
 Il token va nell'header `X-DBMT-Token` (o `Authorization: Bearer`). Si può passare anche nell'indirizzo con `?token=…`, perché `IMPORTDATA` di Fogli Google ed Excel da Web non sanno aggiungere header; ma un indirizzo con il token finisce in cronologia e nei log, e chi lo vede può leggere i dati come il titolare del token.
+
+### Limite di richieste
+
+Ogni token ha un limite di richieste all'ora: 60 se non indicato, oppure quello scelto quando lo si genera (da 1 a 3600). Il conteggio riparte all'inizio di ogni ora. Oltre il limite il sito risponde `429 Too Many Requests` con `Retry-After` (secondi da aspettare). Ogni risposta porta `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset` (timestamp UTC di fine finestra). L'endpoint pubblico dei grafici (`/serie`) non ha limiti.
+
+Il conteggio avviene in `rest_dispatch_request`, dopo i permessi: nel `permission_callback` sarebbe contato due volte, perché WordPress lo richiama anche per l'header `Allow`.
 
 ### `GET /wp-json/dbmt/v1/dati`
 
