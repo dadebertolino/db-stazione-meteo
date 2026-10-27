@@ -17,7 +17,10 @@ function delete_option( $k ) { unset( $GLOBALS['wp_options'][ $k ] ); return tru
 function __( $s, $d = '' ) { return $s; }
 function sanitize_text_field( $s ) { return trim( strip_tags( $s ) ); }
 function rest_ensure_response( $r ) { return $r; }
-function delete_transient( $k ) { return true; }
+$GLOBALS['wp_transients'] = array();
+function get_transient( $k ) { return $GLOBALS['wp_transients'][ $k ] ?? false; }
+function set_transient( $k, $v, $ttl = 0 ) { $GLOBALS['wp_transients'][ $k ] = $v; return true; }
+function delete_transient( $k ) { unset( $GLOBALS['wp_transients'][ $k ] ); return true; }
 
 class WP_Error {
 	public $code;
@@ -314,6 +317,28 @@ $csvit = DBMT_Api::csv( array( $m ), true );
 $r     = explode( "\r\n", $csvit );
 check( 'CSV italiano: BOM, punto e virgola, virgola decimale, data per Excel',
 	"\u{FEFF}" === substr( $csvit, 0, 3 ) && false !== strpos( $r[1], ';2026-10-27 08:00:00;2;bme280;41;;12,8;59,2;967;' ) );
+
+// ------------------------------------------------- Limite di richieste -----
+echo "Limite di richieste\n";
+$t3  = DBMT_Token_Lettura::genera( 'Archivio', 5 );
+$id3 = DBMT_Token_Lettura::verifica( $t3 );
+check( 'limite scelto alla creazione', 5 === DBMT_Token_Lettura::limite( $id3 ) );
+check( 'senza limite indicato: 60 all\'ora', 60 === DBMT_Token_Lettura::limite( DBMT_Token_Lettura::verifica( $l2 ) ) );
+check( 'limite fuori campo: riportato fra 1 e 3600',
+	1 === DBMT_Token_Lettura::limite( DBMT_Token_Lettura::verifica( DBMT_Token_Lettura::genera( 'a', 0 ) ) )
+	&& 3600 === DBMT_Token_Lettura::limite( DBMT_Token_Lettura::verifica( DBMT_Token_Lettura::genera( 'b', 99999 ) ) ) );
+$adesso = gmmktime( 10, 15, 0, 10, 27, 2026 );
+for ( $i = 1; $i <= 5; $i++ ) {
+	$q = DBMT_Api::conta( $id3, 5, $adesso + $i );
+}
+check( 'quinta richiesta: ammessa, ne restano 0', $q['ok'] && 0 === $q['rimaste'] );
+$q = DBMT_Api::conta( $id3, 5, $adesso + 10 );
+check( 'sesta richiesta: rifiutata', ! $q['ok'] && 0 === $q['rimaste'] );
+check( 'reset alle 11:00 UTC, attesa 45 minuti', gmmktime( 11, 0, 0, 10, 27, 2026 ) === $q['reset'] && 2690 === $q['attesa'] );
+$q = DBMT_Api::conta( $id3, 5, gmmktime( 11, 0, 5, 10, 27, 2026 ) );
+check( 'ora successiva: di nuovo ammessa, ne restano 4', $q['ok'] && 4 === $q['rimaste'] );
+$q = DBMT_Api::conta( DBMT_Token_Lettura::verifica( $l2 ), 60, $adesso );
+check( 'ogni token ha il suo conteggio', $q['ok'] && 59 === $q['rimaste'] );
 
 // ------------------------------------------------------------- Report -----
 echo "\n$pass passati, $fail falliti\n";
